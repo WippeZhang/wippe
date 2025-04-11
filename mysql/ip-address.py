@@ -5,6 +5,7 @@ from pyquery import PyQuery as pq
 # import psycopg2
 import mysql.connector
 import re
+from tqdm import tqdm
 
 # 创建 PostgreSQL 数据库连接
 # conn = psycopg2.connect(
@@ -43,7 +44,7 @@ def get_greatfire_ip(start, end):
     succ = []
     all_domains = set()
 
-    for j in range(start, end + 1):
+    for j in tqdm(range(start, end + 1), desc="抓取进度", unit="页"):
         url = 'https://en.greatfire.org/search/ip-addresses?page={}'.format(j)
         try:
             response = requests.get(url)
@@ -86,7 +87,7 @@ def get_greatfire_ip(start, end):
                     #starttime = "1711900800"
                     #endtime = "1719763199"
                     start_timestamp = int(time.mktime(time.strptime('2025-01', '%Y-%m')))
-                    end_timestamp = int(time.mktime(time.strptime('2025-03', '%Y-%m'))) - 1
+                    end_timestamp = int(time.mktime(time.strptime('2025-04', '%Y-%m'))) - 1
                     if not (start_timestamp <= timestamp <= end_timestamp):
                         continue
                     time_str_mysql = time.strftime('%Y-%m-%d', time.strptime(formatted_time_str, '%Y-%b'))

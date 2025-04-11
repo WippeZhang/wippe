@@ -5,6 +5,7 @@ from pyquery import PyQuery as pq
 # import psycopg2
 import mysql.connector
 import re
+from tqdm import tqdm
 
 # 创建 PostgreSQL 数据库连接
 # conn = psycopg2.connect(
@@ -29,13 +30,19 @@ conn = mysql.connector.connect(
     password="z010808",
     database="ip-address"
 )
+print("正在清空 fire_domain 表...")
+cursor = conn.cursor()
+cursor.execute("TRUNCATE TABLE fire_domain")
+conn.commit()
+cursor.close()
+print("已清空 fire_domain 表。")
 
 def get_greatfire_domain(start, end):
     err = []
     succ = []
     all_domains = set()
 
-    for j in range(start, end + 1):
+    for j in tqdm(range(start, end + 1), desc="抓取进度", unit="页"):
         url = 'https://en.greatfire.org/search/domains?page={}'.format(j)
         try:
             response = requests.get(url)
