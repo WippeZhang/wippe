@@ -59,6 +59,7 @@ def get_greatfire_ip(start, end):
                     ip = requests.utils.unquote(ip)
                     t = ip.lstrip('/')
                     domain = t.replace('https/', '').replace('http/', '')
+                    domain = domain.split(":")[0]
                     pos = domain.find('/')
                     if pos != -1:
                         domain = domain[:pos]
@@ -77,7 +78,7 @@ def get_greatfire_ip(start, end):
                     #timestamp = time.strftime('%Y-%m-%d', time.strptime(formatted_time_str, '%Y-%b'))
                     #starttime = "1711900800"
                     #endtime = "1719763199"
-                    if not (1735660800 <= timestamp <= 1743135301):
+                    if not (1735660800 <= timestamp <= 1743436799):
                         continue
                     time_str_mysql = time.strftime('%Y-%m-%d', time.strptime(formatted_time_str, '%Y-%b'))
 
@@ -130,6 +131,7 @@ def get_greatfire_ip(start, end):
 
 # 使用示例
 get_greatfire_ip(0, int(last_page))  # 替换成你的起始和结束页码
+# get_greatfire_ip(0, 0)  # 替换成你的起始和结束页码
 
 # 关闭数据库连接
 conn.close()

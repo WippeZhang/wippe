@@ -2,50 +2,81 @@ import json
 import time
 import requests
 from pyquery import PyQuery as pq
-# import psycopg2
 import mysql.connector
 import re
+from datetime import datetime, timedelta
+from tqdm import tqdm
 
-# 创建 PostgreSQL 数据库连接
-# conn = psycopg2.connect(
-#     dbname='zabbix',
-#     user='zabbix',
-#     password='esun21',
-#     host='10.0.90.94',
-#     port='5432'
-# )
+# ========== 自动获取上个季度的时间戳 ==========
+def get_last_quarter_timestamps():
+    current_month = datetime.now().month
+    current_year = datetime.now().year
 
-last_url = "https://en.greatfire.org/search/domains?page=0"
-response = requests.get(last_url)
-context = response.text
-page = re.compile('<li class="pager-last last">.*page=(\d+)">')
-context_find = page.findall(context)
-last_page = context_find[0]
+    if current_month in [1, 2, 3]:
+        quarter_start_month = 10
+        year = current_year - 1
+    elif current_month in [4, 5, 6]:
+        quarter_start_month = 1
+        year = current_year
+    elif current_month in [7, 8, 9]:
+        quarter_start_month = 4
+        year = current_year
+    else:
+        quarter_start_month = 7
+        year = current_year
 
-# Mysql 数据库连接
-conn = mysql.connector.connect(
-    host="localhost",
-    user="wippe",
-    password="z010808",
-    database="ip-address"
-)
+    start_time = datetime(year, quarter_start_month, 1)
+    if quarter_start_month == 10:
+        end_time = datetime(year + 1, 1, 1) - timedelta(seconds=1)
+    else:
+        end_time = datetime(year, quarter_start_month + 3, 1) - timedelta(seconds=1)
 
-def get_greatfire_domain(start, end):
+    start_ts = int(time.mktime(start_time.timetuple()))
+    end_ts = int(time.mktime(end_time.timetuple()))
+
+    print(f"\n本次运行抓取时间范围：{start_time.strftime('%Y-%m')} → {end_time.strftime('%Y-%m')}（时间戳：{start_ts} - {end_ts}）")
+    return start_ts, end_ts
+
+# ========== 获取总页数 ==========
+def get_last_page():
+    url = "https://en.greatfire.org/search/domains?page=0"
+    response = requests.get(url)
+    context = response.text
+    page = re.compile(r'<li class="pager-last last">.*page=(\d+)">')
+    context_find = page.findall(context)
+    return int(context_find[0]) if context_find else 0
+
+# ========== 主逻辑 ==========
+def get_greatfire_domain(start, end, start_ts, end_ts):
+    conn = mysql.connector.connect(
+        host="localhost",
+        user="wippe",
+        password="z010808",
+        database="ip-address"
+    )
+
+    # ✅ 清空表
+    print("正在清空 fire_domain 表...")
+    cursor = conn.cursor()
+    cursor.execute("TRUNCATE TABLE fire_domain")
+    conn.commit()
+    cursor.close()
+    print("已清空 fire_domain 表。")
+
     err = []
     succ = []
     all_domains = set()
 
-    for j in range(start, end + 1):
-        url = 'https://en.greatfire.org/search/domains?page={}'.format(j)
+    for j in tqdm(range(start, end + 1), desc="Fetching Domain Pages"):
+        url = f'https://en.greatfire.org/search/domains?page={j}'
         try:
             response = requests.get(url)
             response.raise_for_status()
 
             d = pq(response.text)
             rows = d('tbody tr')
-            
+
             for row in rows.items():
-                # print(11)
                 ip = ''
                 censored = ''
 
@@ -66,23 +97,27 @@ def get_greatfire_domain(start, end):
                         continue
                     else:
                         all_domains.add(domain)
+                else:
+                    continue
 
                 if time_elem:
                     time_str = time_elem.text()
                     time_arr = time_str.split(' ')
                     formatted_time_str = time_arr[1] + '-' + time_arr[0]
                     timestamp = int(time.mktime(time.strptime(formatted_time_str, '%Y-%b')))
-                    # 2024年4月1日到2024年6月30日
-                    # starttime = "1711900800"
-                    # endtime = "1719763199"
-                    if not (1735660800 <= timestamp <= 1743436799):
+                    if not (start_ts <= timestamp <= end_ts):
                         continue
+                    time_str_mysql = time.strftime('%Y-%m-%d', time.strptime(formatted_time_str, '%Y-%b'))
+                else:
+                    continue
 
                 if censored_elem:
                     censored = censored_elem.text().strip('%')
                     censored = int(censored)
                     if censored < 100:
                         continue
+                else:
+                    continue
 
                 insert = {
                     'json': json.dumps({
@@ -91,14 +126,13 @@ def get_greatfire_domain(start, end):
                         'censored': censored_elem.text(),
                     }),
                     'domain': domain,
-                    'time_str': time_str,
+                    'time_str': time_str_mysql,
                     'time': timestamp,
                     'censored': censored,
                     'type': 2,
                     'page': j,
                 }
-                # print(insert)
-                # 插入数据到 PostgreSQL 数据库
+
                 cursor = conn.cursor()
                 insert_query = """
                     INSERT INTO fire_domain (json, domain, time_str, time, censored, type, page)
@@ -117,15 +151,16 @@ def get_greatfire_domain(start, end):
                 cursor.close()
 
                 succ.append(j)
-                # print('--------------------')
+
         except Exception as e:
             err.append({'info': str(e), 'page': j, 'domain': ip, 'censored': censored})
 
+    print("抓取完成，失败页面如下：")
     print(err)
+    conn.close()
 
-
-# 使用示例
-get_greatfire_domain(0, int(last_page))  # 替换成你的起始和结束页码
-
-# 关闭数据库连接
-conn.close()
+# ========== 启动入口 ==========
+if __name__ == "__main__":
+    start_ts, end_ts = get_last_quarter_timestamps()
+    last_page = get_last_page()
+    get_greatfire_domain(0, last_page, start_ts, end_ts)
