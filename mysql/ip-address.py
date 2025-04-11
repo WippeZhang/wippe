@@ -31,7 +31,6 @@ conn = mysql.connector.connect(
     database="ip-address"
 )
 # 👉 清空 ip_address 表
-print("正在清空 ip_address 表...")
 cursor = conn.cursor()
 cursor.execute("TRUNCATE TABLE ip_address")
 conn.commit()

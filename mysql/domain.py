@@ -30,7 +30,6 @@ conn = mysql.connector.connect(
     password="z010808",
     database="ip-address"
 )
-print("正在清空 fire_domain 表...")
 cursor = conn.cursor()
 cursor.execute("TRUNCATE TABLE fire_domain")
 conn.commit()
