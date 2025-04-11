@@ -29,6 +29,13 @@ conn = mysql.connector.connect(
     password="z010808",
     database="ip-address"
 )
+# 👉 清空 ip_address 表
+print("正在清空 ip_address 表...")
+cursor = conn.cursor()
+cursor.execute("TRUNCATE TABLE ip_address")
+conn.commit()
+cursor.close()
+print("已清空 ip_address 表。")
 
 
 def get_greatfire_ip(start, end):
@@ -78,7 +85,9 @@ def get_greatfire_ip(start, end):
                     #timestamp = time.strftime('%Y-%m-%d', time.strptime(formatted_time_str, '%Y-%b'))
                     #starttime = "1711900800"
                     #endtime = "1719763199"
-                    if not (1735660800 <= timestamp <= 1743436799):
+                    start_timestamp = int(time.mktime(time.strptime('2025-01', '%Y-%m')))
+                    end_timestamp = int(time.mktime(time.strptime('2025-03', '%Y-%m'))) - 1
+                    if not (start_timestamp <= timestamp <= end_timestamp):
                         continue
                     time_str_mysql = time.strftime('%Y-%m-%d', time.strptime(formatted_time_str, '%Y-%b'))
 

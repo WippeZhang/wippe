@@ -75,7 +75,9 @@ def get_greatfire_domain(start, end):
                     # 2024年4月1日到2024年6月30日
                     # starttime = "1711900800"
                     # endtime = "1719763199"
-                    if not (1735660800 <= timestamp <= 1743436799):
+                    start_timestamp = int(time.mktime(time.strptime('2025-01', '%Y-%m')))
+                    end_timestamp = int(time.mktime(time.strptime('2025-03', '%Y-%m'))) - 1
+                    if not (start_timestamp <= timestamp <= end_timestamp):
                         continue
 
                 if censored_elem:
