@@ -24,11 +24,17 @@ context_find = page.findall(context)
 last_page = context_find[0]
 
 # Mysql 数据库连接
+# conn = mysql.connector.connect(
+#     host="localhost",
+#     user="wippe",
+#     password="z010808",
+#     database="ip-address"
+# )
 conn = mysql.connector.connect(
-    host="localhost",
-    user="wippe",
+    host="10.0.31.115",
+    user="root",
     password="z010808",
-    database="ip-address"
+    database="GreatFire"
 )
 # 👉 清空 ip_address 表
 cursor = conn.cursor()

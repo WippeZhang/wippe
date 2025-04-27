@@ -15,5 +15,5 @@ def convert_cidr_to_netmask(file_path):
                 print(f"无效的CIDR表示法 '{cidr}': {e}")
 
 # 示例用法
-file_path = 'china-ip.txt'  # 替换为您的文件路径
+file_path = 'AWS-IP.txt'  # 替换为您的文件路径
 convert_cidr_to_netmask(file_path)
